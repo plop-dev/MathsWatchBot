@@ -11,9 +11,13 @@ from sympy import pretty
 from rich.console import Console
 from rich.padding import Padding
 from bisect import bisect_left
+from dotenv import load_dotenv
+import os
 
-USERNAME = "5287@stgcc"
-PASSWORD = "Triangle"
+load_dotenv()
+
+USERNAME = os.getenv("USERNAME")
+PASSWORD = os.getenv("PASSWORD")
 
 console = Console()
 INFO = "bold blue"
