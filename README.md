@@ -82,3 +82,5 @@ This project is licensed under the MIT License.
 ## Contact
 
 For any inquiries, please contact <him@maximec.dev>.
+
+<small>this readme is ai because I can't be asked. so don't judge my ai english.</small>
