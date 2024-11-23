@@ -27,6 +27,17 @@ A python script that retrieves MathsWatch answers by looking at already submitte
 3. Install the required dependencies:
     you'll get errors for depedencies that aren't installed anyways
 
+4. Add a config file (.env):
+
+    ```env
+    USERNAME = "User123"
+    PASSWORD = "Password123"
+
+    INFO = "bold blue"
+    SUCCESS = "bold green"
+    DANGER = "bold red"
+    ```
+
 ## Usage
 
 1. **Get Cookies**:

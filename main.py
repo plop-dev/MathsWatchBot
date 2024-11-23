@@ -1,8 +1,12 @@
-from getcookies import getcookies
-from login import login
-from extractanswers import extractanswers
-from logout import logout
-from getrecent import getrecent
+from utils import (
+    getcookies,
+    login,
+    extractanswers,
+    logout,
+    getrecent,
+    find_user_info,
+    find_class,
+)
 
 import sys
 import json
@@ -10,7 +14,6 @@ from sympy.parsing.latex import parse_latex
 from sympy import pretty
 from rich.console import Console
 from rich.padding import Padding
-from bisect import bisect_left
 from dotenv import load_dotenv
 import os
 
@@ -18,51 +21,13 @@ load_dotenv()
 
 USERNAME = os.getenv("USERNAME")
 PASSWORD = os.getenv("PASSWORD")
+INFO = os.getenv("INFO")
+SUCCESS = os.getenv("SUCCESS")
+DANGER = os.getenv("DANGER")
 
 console = Console()
-INFO = "bold blue"
-SUCCESS = "bold green"
-DANGER = "bold red"
 
 cookies = {}
-
-
-def find_user_info(username: str) -> dict:
-    try:
-        with open("users.json", "r") as file:
-            classes = json.load(file)
-    except Exception as e:
-        console.print(
-            f"[!] Unable to open users.json. Reason: {e}\nHave you run recon.py?",
-            style=DANGER,
-        )
-        sys.exit()
-
-    for class_name, users in classes.items():
-        index = bisect_left([user["username"] for user in users], username)
-        if index != len(users) and users[index]["username"] == username:
-            return users[index]
-
-    return None
-
-
-def find_class(username: str) -> str:
-    try:
-        with open("users.json", "r") as file:
-            classes = json.load(file)
-    except Exception as e:
-        console.print(
-            f"[!] Unable to open users.json. Reason: {e}\nHave you run recon.py?",
-            style=DANGER,
-        )
-        sys.exit()
-
-    for class_name, users in classes.items():
-        index = bisect_left([user["username"] for user in users], username)
-        if index != len(users) and users[index]["username"] == username:
-            return class_name
-
-    return None
 
 
 def getanswer(username: str, quiz_id) -> None:
