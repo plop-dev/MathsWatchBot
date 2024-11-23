@@ -30,7 +30,7 @@ A python script that retrieves MathsWatch answers by looking at already submitte
 4. Add a config file (.env):
 
     ```env
-    USERNAME = "User123"
+    LOGIN_USERNAME = "User123"
     PASSWORD = "Password123"
 
     INFO = "bold blue"
