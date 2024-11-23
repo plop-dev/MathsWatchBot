@@ -21,11 +21,15 @@ def getcookies(username: str, password: str) -> dict:
     }
     # print(f"Headers: {headers}")
 
-    response = requests.request("GET", url, headers=headers, data=payload)
-    # print(f"Response Status Code: {response.status_code}")
-    # print(f"Response Cookies: {response.cookies}")
+    try:
+        response = requests.request("GET", url, headers=headers, data=payload)
+        # print(f"Response Status Code: {response.status_code}")
+        # print(f"Response Cookies: {response.cookies}")
 
-    cookies = response.cookies.get_dict()
-    # print(f"Cookies: {cookies}")
+        cookies = response.cookies.get_dict()
+        # print(f"Cookies: {cookies}")
 
-    return cookies
+        return cookies
+    except requests.RequestException as e:
+        print(f"Error during getcookies request: {e}")
+        return None

@@ -22,10 +22,16 @@ def getrecent(sid: str, csrf: str) -> dict:
     }
     # print(f"Headers: {headers}")
 
-    request = requests.request("GET", url, headers=headers, params=params)
-    response = json.loads(request.text.replace("'", '"'))
-
-    return {
-        "id": response["data"][0]["id"],
-        "name": response["data"][0]["title"],
-    }
+    try:
+        request = requests.request("GET", url, headers=headers, params=params)
+        response = json.loads(request.text.replace("'", '"'))
+        return {
+            "id": response["data"][0]["id"],
+            "name": response["data"][0]["title"],
+        }
+    except requests.RequestException as e:
+        print(f"Error during getrecent request: {e}")
+        return None
+    except (json.JSONDecodeError, KeyError, IndexError) as e:
+        print(f"Error parsing getrecent response: {e}")
+        return None

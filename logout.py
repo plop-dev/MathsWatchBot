@@ -18,6 +18,9 @@ def logout(sid: str, csrf: str) -> int:
         "x-csrf-token": csrf,
     }
 
-    request = requests.request("GET", url, headers=headers, data=payload)
-
-    return request.status_code
+    try:
+        request = requests.request("GET", url, headers=headers, data=payload)
+        return request.status_code
+    except requests.RequestException as e:
+        print(f"Error during logout request: {e}")
+        return None

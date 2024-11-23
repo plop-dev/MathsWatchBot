@@ -27,7 +27,9 @@ def login(sid: str, csrf: str, username: str, password: str) -> int:
     # print(f"Headers set: {headers}")
 
     # print("Sending POST request")
-    response = requests.request("POST", url, headers=headers, data=payload)
-    # print("POST request sent")
-
-    return response.status_code
+    try:
+        response = requests.request("POST", url, headers=headers, data=payload)
+        return response.status_code
+    except requests.RequestException as e:
+        print(f"Error during login request: {e}")
+        return None

@@ -28,8 +28,15 @@ cookies = {}
 
 
 def find_user_info(username: str) -> dict:
-    with open("users.json", "r") as file:
-        classes = json.load(file)
+    try:
+        with open("users.json", "r") as file:
+            classes = json.load(file)
+    except Exception as e:
+        console.print(
+            f"[!] Unable to open users.json. Reason: {e}\nHave you run recon.py?",
+            style=DANGER,
+        )
+        sys.exit()
 
     for class_name, users in classes.items():
         index = bisect_left([user["username"] for user in users], username)
@@ -40,8 +47,15 @@ def find_user_info(username: str) -> dict:
 
 
 def find_class(username: str) -> str:
-    with open("users.json", "r") as file:
-        classes = json.load(file)
+    try:
+        with open("users.json", "r") as file:
+            classes = json.load(file)
+    except Exception as e:
+        console.print(
+            f"[!] Unable to open users.json. Reason: {e}\nHave you run recon.py?",
+            style=DANGER,
+        )
+        sys.exit()
 
     for class_name, users in classes.items():
         index = bisect_left([user["username"] for user in users], username)

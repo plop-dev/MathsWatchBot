@@ -25,16 +25,17 @@ def extractanswers(sid: str, csrf: str, qid: str) -> dict:
     # print("Headers initialized")
 
     # print("Sending GET request")
-    request = requests.request("GET", url, headers=headers, data=payload)
-    response = json.loads(request.text.replace("'", '"'))
-    # print("Response received")
-
-    answers = {}
-    # print("Extracting status from response")
-    answers["status"] = response["status"]
-
-    # print("Extracting answers from response")
-    answers["answers"] = response["data"]
-    # print("Answers extracted")
-
-    return answers
+    try:
+        request = requests.request("GET", url, headers=headers, data=payload)
+        response = json.loads(request.text.replace("'", '"'))
+        answers = {
+            "status": response["status"],
+            "answers": response["data"],
+        }
+        return answers
+    except requests.RequestException as e:
+        print(f"Error during extractanswers request: {e}")
+        return None
+    except (json.JSONDecodeError, KeyError) as e:
+        print(f"Error parsing extractanswers response: {e}")
+        return None
