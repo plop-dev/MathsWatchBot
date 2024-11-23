@@ -6,9 +6,9 @@ from bisect import bisect_left
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
+load_dotenv(dotenv_path="./")
 
-USERNAME = os.getenv("USERNAME")
+USERNAME = os.getenv("LOGIN_USERNAME")
 PASSWORD = os.getenv("PASSWORD")
 INFO = os.getenv("INFO")
 SUCCESS = os.getenv("SUCCESS")
@@ -45,9 +45,10 @@ def generate_headers(sid: str | None = None, csrf: str | None = None) -> dict:
 
 
 def extractanswers(sid: str, csrf: str, qid: str) -> dict:
-    url = f"https://vle.mathswatch.co.uk/duocms/api/answers?assignedwork_id={qid}"
+    url = f"https://vle.mathswatch.co.uk/duocms/api/answers?assignedwork_id={qid['id']}"
     payload = {}
     headers = generate_headers(sid, csrf)
+
     try:
         request = requests.request("GET", url, headers=headers, data=payload)
         response = json.loads(request.text.replace("'", '"'))
@@ -89,6 +90,26 @@ def getrecent(sid: str, csrf: str) -> dict:
         return {
             "id": response["data"][0]["id"],
             "name": response["data"][0]["title"],
+        }
+    except requests.RequestException as e:
+        print(f"Error during getrecent request: {e}")
+        return None
+    except (json.JSONDecodeError, KeyError, IndexError) as e:
+        print(f"Error parsing getrecent response: {e}")
+        return None
+
+
+def getquiz(sid: str, csrf: str, qid: str) -> dict:
+    url = f"https://vle.mathswatch.co.uk/duocms/api/assignedwork/{qid}"
+    params = {"id": qid}
+    headers = generate_headers(sid, csrf)
+
+    try:
+        request = requests.request("GET", url, headers=headers, params=params)
+        response = json.loads(request.text.replace("'", '"'))
+        return {
+            "id": response["data"]["id"],
+            "name": response["data"]["title"],
         }
     except requests.RequestException as e:
         print(f"Error during getrecent request: {e}")
@@ -140,6 +161,8 @@ def find_user_info(username: str) -> dict:
         if index != len(users) and users[index]["username"] == username:
             return users[index]
 
+    console.print(f"[!] User ({username}) not found in users.json", style=DANGER)
+    sys.exit()
     return None
 
 
@@ -159,4 +182,6 @@ def find_class(username: str) -> str:
         if index != len(users) and users[index]["username"] == username:
             return class_name
 
+    console.print(f"[!] User ({username}) class not found in users.json", style=DANGER)
+    sys.exit()
     return None

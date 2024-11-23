@@ -4,6 +4,7 @@ from utils import (
     extractanswers,
     logout,
     getrecent,
+    getquiz,
     find_user_info,
     find_class,
 )
@@ -17,9 +18,9 @@ from rich.padding import Padding
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
+load_dotenv(dotenv_path=".env")
 
-USERNAME = os.getenv("USERNAME")
+USERNAME = os.getenv("LOGIN_USERNAME")
 PASSWORD = os.getenv("PASSWORD")
 INFO = os.getenv("INFO")
 SUCCESS = os.getenv("SUCCESS")
@@ -37,7 +38,7 @@ def getanswer(username: str, quiz_id) -> None:
 
     console.print("[*] Logging in...", style=INFO)
     login_info = login(cookies["connect.sid"], cookies["_csrf"], USERNAME, PASSWORD)
-    console.print(f"[+] Login info: {login_info}", style=SUCCESS)
+    console.print(f"[+] Login status: {login_info}", style=SUCCESS)
 
     if login_info != 200:
         console.print(
@@ -93,7 +94,7 @@ def getanswer(username: str, quiz_id) -> None:
     return "success"
 
 
-def main():
+def main(quiz_id: int | None = None) -> None:
     console.print(
         f"[*] Starting the script with default user: {USERNAME} ({find_user_info(USERNAME)['first_name'] + ' ' + find_user_info(USERNAME)['surname']})...",
         style=INFO,
@@ -110,7 +111,7 @@ def main():
     login_info = login(
         def_cookies["connect.sid"], def_cookies["_csrf"], USERNAME, PASSWORD
     )
-    console.print(f"[+] Login info: {login_info}", style=SUCCESS)
+    console.print(f"[+] Login status: {login_info}", style=SUCCESS)
     if login_info != 200:
         console.print(
             f"[!] Error {login_info}: Could not get user data.\n[i]Exiting...[/i]",
@@ -120,36 +121,59 @@ def main():
 
     console.print("[+] Successfully logged into default user account.", style=SUCCESS)
 
-    console.print("[*] Getting recent quiz ID...", style=INFO)
-    recent_quiz_id = getrecent(def_cookies["connect.sid"], def_cookies["_csrf"])
-    console.print(
-        f"[+] Recent quiz ID: {recent_quiz_id['id']} ({recent_quiz_id['name']})",
-        style=SUCCESS,
-    )
+    if quiz_id is None:
+        console.print("[*] Getting recent quiz ID...", style=INFO)
+        recent_quiz_id = getrecent(def_cookies["connect.sid"], def_cookies["_csrf"])
+        console.print(
+            f"[+] Recent quiz ID: {recent_quiz_id['id']} ({recent_quiz_id['name']})",
+            style=SUCCESS,
+        )
+    else:
+        console.print("[*] Using provided quiz ID...", style=INFO)
+        recent_quiz_id = getquiz(
+            def_cookies["connect.sid"], def_cookies["_csrf"], quiz_id
+        )
+        console.print(
+            f"[+] Recent quiz ID: {recent_quiz_id['id']} ({recent_quiz_id['name']})",
+            style=SUCCESS,
+        )
 
     console.print("[*] Logging out...", style=INFO)
     logout(def_cookies["connect.sid"], def_cookies["_csrf"])
     console.print("[+] Logged out", style=SUCCESS)
+    console.rule()
 
     del def_cookies
 
     # loop through all users in the class
     with open("users.json", "r") as file:
+        answers_found = 0
+        total_users = 0
         users = json.load(file)[user_class]
 
         for user in users:
+            total_users += 1
             console.print(f"[*] Getting answers for {user['username']}...", style=INFO)
             res = getanswer(user["username"], recent_quiz_id)
 
             if res == "skipped":
                 continue
             else:
+                answers_found += 1
                 console.print(
                     f"[+] Answers for {user['username']} ({user['first_name'] + ' ' + user['surname']}) retrieved",
                     style=SUCCESS,
                 )
                 break
 
+    console.print(
+        f"[{SUCCESS}]Results:[/]",
+        Padding(
+            f"Users Searched: {total_users}\nAnswers found: {answers_found}\nAnswers skipped: {total_users - answers_found}",
+            (0, 2),
+        ),
+    )
+
 
 if __name__ == "__main__":
-    main()
+    main(9442834)

@@ -23,7 +23,7 @@ def recon(
 
     console.print("[*] Logging in...", style=INFO)
     login_info = login(cookies["connect.sid"], cookies["_csrf"], username, PASSWORD)
-    console.print(f"[+] Login info: {login_info}", style=SUCCESS)
+    console.print(f"[+] Login status: {login_info}", style=SUCCESS)
 
     headers = {
         "accept": "*/*",
