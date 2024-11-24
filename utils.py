@@ -227,7 +227,6 @@ def convert_latex_to_unicode(latex_str):
         elif index == "4":
             return f"∜({radicand})"
         else:
-            # For higher roots, use superscript index
             index_sup = index.translate(superscripts_map)
             return f"{index_sup}√({radicand})"
 

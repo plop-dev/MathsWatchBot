@@ -63,35 +63,6 @@ def getanswer(username: str, quiz_id) -> None:
         console.rule()
         return "skipped"
 
-    # for i in range(len(answers["answers"])):
-    #     console.print(Padding(f"[u][{INFO}]Question {i + 1}[/]:[/]\n", (0, 2)))
-
-    #     for j in range(len(answers["answers"][i]["answer"])):
-    #         answer = answers["answers"][i]["answer"][j]["text"]
-
-    #         try:
-    #             if type(answer) is list:
-    #                 answer = answer[0]
-    #             expr = parse_latex(answer)
-    #         except Exception as e:
-    #             console.print(f"Error parsing answer: {answer}: {e}", style=DANGER)
-    #             continue
-
-    #         console.print(
-    #             Padding(
-    #                 f"[u][{SUCCESS}]Answer {j + 1}[/]:[/]\n{pretty(expr, use_unicode=True)}\n",
-    #                 (0, 2),
-    #             )
-    #         )
-
-    #     if i + 1 != len(answers["answers"]):
-    #         console.rule()
-
-    # console.print("[*] Logging out...", style=INFO)
-    # logout(cookies["connect.sid"], cookies["_csrf"])
-    # console.print("[+] Logged out", style=SUCCESS)
-    # return "success"
-
     extracted_answers = {}
 
     for i in range(len(answers["answers"])):
@@ -177,10 +148,6 @@ def main(quiz_id: int | None = None) -> None:
                 f"[{INFO}]User: {user['username']} ({user['first_name'].strip() + ' ' + user['surname']})[/]",
                 align="left",
             )
-            # console.print(
-            #     f"[*] Getting answers for {user['username']} ({user['first_name'].strip() + ' ' + user['surname']})...",
-            #     style=INFO,
-            # )
             res = getanswer(user, recent_quiz_id)
 
             if res == "skipped":
@@ -209,7 +176,6 @@ def main(quiz_id: int | None = None) -> None:
                                 count
                             )
 
-        # Determine the most common answers
         most_common_answers = {}
         for question, answers in all_extracted_answers.items():
             most_common_answers[question] = {}
