@@ -57,7 +57,7 @@ def getanswer(username: str, quiz_id) -> None:
 
         user_info = username
         console.print(
-            f"[!] No answers found for {username} ({user_info['first_name'].strip() + ' ' + user_info['surname']})\n[i]Skipping user...[/]",
+            f"[!] No answers found for {username['username']} ({user_info['first_name'].strip() + ' ' + user_info['surname']})\n[i]Skipping user...[/]",
             style=DANGER,
         )
         console.rule()
@@ -217,28 +217,35 @@ def main(quiz_id: int | None = None) -> None:
                 most_common_answer = max(sub_answers, key=sub_answers.get)
                 most_common_answers[question][sub_question] = most_common_answer
 
-        console.rule(f"[{INFO}]Most Common Answers[/]", align="left")
+        if len(most_common_answers) == 0:
+            console.print(
+                f"[!] No answers found for any user in {user_class}.",
+                style=DANGER,
+            )
+        else:
+            console.rule(f"[{INFO}]Most Common Answers[/]", align="left")
 
-        for i in range(len(most_common_answers)):
-            console.print(f"\n[{INFO}]Question {i + 1}[/]:")
+            for i in range(len(most_common_answers)):
+                console.print(f"\n[{INFO}]Question {i + 1}[/]:")
 
-            for j in range(len(most_common_answers[f"{i + 1}"])):
-                answer = most_common_answers[f"{i + 1}"][f"{j + 1}"]
+                for j in range(len(most_common_answers[f"{i + 1}"])):
+                    answer = most_common_answers[f"{i + 1}"][f"{j + 1}"]
 
-                try:
-                    expr = answer.replace("[", "").replace("]", "").replace("'", "")
-                except Exception as e:
-                    console.print(f"Error parsing answer: {answer}: {e}", style=DANGER)
-                    continue
+                    try:
+                        expr = answer.replace("[", "").replace("]", "").replace("'", "")
+                    except Exception as e:
+                        console.print(
+                            f"Error parsing answer: {answer}: {e}", style=DANGER
+                        )
+                        continue
 
-                console.print(Padding(f"[{SUCCESS}]Answer {j + 1}[/]:", (0, 2)))
-                console.print(
-                    Padding(
-                        f"{convert_latex_to_unicode(expr)}",
-                        (0, 4),
-                    ),
-                    "\n",
-                )
+                    console.print(Padding(f"[{SUCCESS}]Answer {j + 1}[/]:", (0, 2)))
+                    console.print(
+                        Padding(
+                            f"{convert_latex_to_unicode(expr)}",
+                            (0, 4),
+                        )
+                    )
 
     console.rule(f"[{SUCCESS}]Results:[/]", align="left")
     console.print(
@@ -250,4 +257,4 @@ def main(quiz_id: int | None = None) -> None:
 
 
 if __name__ == "__main__":
-    main(9442834)
+    main()
