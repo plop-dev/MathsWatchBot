@@ -1,4 +1,5 @@
 import requests
+import re
 import sys
 import json
 from rich.console import Console
@@ -185,3 +186,60 @@ def find_class(username: str) -> str:
     console.print(f"[!] User ({username}) class not found in users.json", style=DANGER)
     sys.exit()
     return None
+
+
+def convert_latex_to_unicode(latex_str):
+    # Remove \left and \right
+    latex_str = latex_str.replace(r"\left", "").replace(r"\right", "")
+
+    # Function to convert superscripts
+    def convert_superscripts(match):
+        superscripts_map = str.maketrans("0123456789+-=()n", "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿ")
+        content = match.group(1).strip("{}")
+        return content.translate(superscripts_map)
+
+    # Function to convert subscripts
+    def convert_subscripts(match):
+        subscripts_map = str.maketrans("0123456789+-=()n", "₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₙ")
+        content = match.group(1).strip("{}")
+        return content.translate(subscripts_map)
+
+    # Function to convert fractions with a dividing line
+    def convert_fraction(match: re.Match[str]):
+        numerator = match.group(1)
+        denominator = match.group(2)
+        length = max(len(numerator), len(denominator))
+        line = "─" * length
+        numerator = numerator.center(length)
+        denominator = denominator.center(length)
+        return f"{numerator}\n{line}\n{denominator}"
+
+    # Function to convert roots
+    def convert_roots(match):
+        index = match.group(1)
+        radicand = match.group(2)
+        superscripts_map = str.maketrans("0123456789+-=()n", "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿ")
+        if not index:
+            # Square root
+            return f"√({radicand})"
+        elif index == "3":
+            return f"∛({radicand})"
+        elif index == "4":
+            return f"∜({radicand})"
+        else:
+            # For higher roots, use superscript index
+            index_sup = index.translate(superscripts_map)
+            return f"{index_sup}√({radicand})"
+
+    # Apply all transformations
+    transformed_str = latex_str
+    transformed_str = re.sub(
+        r"\\frac\{([^}]*)\}\{([^}]*)\}", convert_fraction, transformed_str
+    )
+    transformed_str = re.sub(
+        r"\\sqrt(?:\[(.*?)\])?\{(.*?)\}", convert_roots, transformed_str
+    )
+    transformed_str = re.sub(r"\^(\{[^}]*\}|.)", convert_superscripts, transformed_str)
+    transformed_str = re.sub(r"_(\{[^}]*\}|.)", convert_subscripts, transformed_str)
+
+    return transformed_str
