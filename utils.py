@@ -2,20 +2,76 @@ import requests
 import re
 import sys
 import json
+import cv2
+import numpy as np
 from rich.console import Console
 from bisect import bisect_left
 from dotenv import load_dotenv
+from openai import OpenAI
+import base64
 import os
 
-load_dotenv(dotenv_path="./")
+load_dotenv()
 
 USERNAME = os.getenv("LOGIN_USERNAME")
 PASSWORD = os.getenv("PASSWORD")
 INFO = os.getenv("INFO")
 SUCCESS = os.getenv("SUCCESS")
 DANGER = os.getenv("DANGER")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 console = Console()
+
+client = OpenAI(api_key=OPENAI_API_KEY)
+
+
+def run_once(f):
+    def wrapper(*args, **kwargs):
+        if not wrapper.has_run:
+            wrapper.has_run = True
+            return f(*args, **kwargs)
+
+    wrapper.has_run = False
+    return wrapper
+
+
+def encode_image(image_path):
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode("utf-8")
+
+
+def get_working_out(image_path):
+    base64_image = encode_image(image_path)
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {
+                "role": "user",
+                "content": "You only provide working out for provided questions as well as the question itself; no answers. Display the answers in latex format. You might receive 1 or 2 questions that might be labelled; answer both and label them if necessary. Provide between 2-4 steps of working out **maximum**. Don't include \\begin or \\align or \\\\ or boxed in the latex. Separate each step with a new line (do not include equal signs, they wil be a new line). Only have a very short andbrief explanation for some steps only if necessary. Format the working out in a layout that is easy to read.",
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "What is the working for this question? Don't add backslashes before every bracket.",
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/png;base64,{base64_image}",
+                            "detail": "low",
+                        },
+                    },
+                ],
+            },
+        ],
+    )
+
+    answer = response.choices[0].message.content.strip()
+
+    return answer
 
 
 def generate_headers(sid: str | None = None, csrf: str | None = None) -> dict:
@@ -188,9 +244,49 @@ def find_class(username: str) -> str:
     return None
 
 
+def downloadquestion(id: int) -> int:
+    url = f"https://vle.mathswatch.co.uk/images/questions/question{id}.png"
+    headers = generate_headers()
+    file_path = f"./questions/{id}.png"
+
+    if os.path.exists(file_path):
+        console.print(f"[*] File {file_path} already exists.", style=SUCCESS)
+        return 10000  # HTTP status code for OK
+
+    try:
+        request = requests.request("GET", url, headers=headers)
+        with open(file_path, "wb") as file:
+            file.write(request.content)
+
+        return request.status_code
+    except requests.RequestException as e:
+        print(f"Error during download question request: {e}")
+        return None
+
+
 def convert_latex_to_unicode(latex_str):
     # Remove \left and \right
     latex_str = latex_str.replace(r"\left", "").replace(r"\right", "")
+
+    # Replace common symbols
+    symbol_replacements = {
+        "\\pi": "π",
+        "\\phi": "φ",
+        "\\pm": "±",
+        "\\times": "×",
+        "\\e": "e",
+        "&": "",
+        "$": "",
+        "\\cdot": "×",
+        "\\(": "",
+        "\\)": "",
+        "minus": "-",
+        "plus": "+",
+        "times": "×",
+        "div": "÷",
+    }
+    for latex_cmd, unicode_char in symbol_replacements.items():
+        latex_str = latex_str.replace(latex_cmd, unicode_char)
 
     # Function to convert superscripts
     def convert_superscripts(match):
@@ -206,39 +302,107 @@ def convert_latex_to_unicode(latex_str):
 
     # Function to convert fractions with a dividing line
     def convert_fraction(match: re.Match[str]):
-        numerator = match.group(1)
-        denominator = match.group(2)
+        numerator = match.group(1).strip()
+        denominator = match.group(2).strip()
         length = max(len(numerator), len(denominator))
         line = "─" * length
         numerator = numerator.center(length)
         denominator = denominator.center(length)
-        return f"{numerator}\n{line}\n{denominator}"
+
+        # if the fraction has an equal sign, place it in the middle of the line
+        if "=" in match.group(0):
+            line = "═ " + line[length:]
+            denominator = denominator.center(length)
+        return f"\n{numerator}\n{line}\n{denominator}\n"
 
     # Function to convert roots
     def convert_roots(match):
         index = match.group(1)
         radicand = match.group(2)
-        superscripts_map = str.maketrans("0123456789+-=()n", "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿ")
         if not index:
-            # Square root
             return f"√({radicand})"
-        elif index == "3":
-            return f"∛({radicand})"
-        elif index == "4":
-            return f"∜({radicand})"
         else:
+            superscripts_map = str.maketrans("0123456789+-=()n", "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿ")
             index_sup = index.translate(superscripts_map)
             return f"{index_sup}√({radicand})"
 
     # Apply all transformations
     transformed_str = latex_str
+    # Convert fractions written with \frac{}
     transformed_str = re.sub(
         r"\\frac\{([^}]*)\}\{([^}]*)\}", convert_fraction, transformed_str
     )
+    # Convert fractions written with '/'
+    transformed_str = re.sub(
+        r"(?<!\S)(.+?)\s*\/\s*(.+)",
+        convert_fraction,
+        transformed_str,
+    )
+    # Convert roots
     transformed_str = re.sub(
         r"\\sqrt(?:\[(.*?)\])?\{(.*?)\}", convert_roots, transformed_str
     )
+    # Convert superscripts
     transformed_str = re.sub(r"\^(\{[^}]*\}|.)", convert_superscripts, transformed_str)
+    # Convert subscripts
     transformed_str = re.sub(r"_(\{[^}]*\}|.)", convert_subscripts, transformed_str)
 
     return transformed_str
+
+
+def crop_whitespace(
+    image_path: str = "./questions/image.png",
+    output_path: str = "./questions/image_cropped.png",
+) -> int:
+    # Check if the output file already exists
+    if os.path.exists(output_path):
+        console.print(f"[*] File {output_path} already exists.", style=SUCCESS)
+        return 10000
+
+    # Load the image
+    image = cv2.imread(image_path)
+    if image is None:
+        print("Error: Unable to load image.")
+        return 500
+
+    # Convert to HSV color space
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+    # Use the user-provided blue color range
+    lower_blue = np.array([80, 10, 10])  # Lower bound for blue
+    upper_blue = np.array([220, 255, 255])  # Upper bound for blue
+
+    # Create a mask for blue areas
+    blue_mask = cv2.inRange(hsv, lower_blue, upper_blue)
+
+    # Apply the mask to the original image
+    result = image.copy()
+    result[blue_mask > 0] = [255, 255, 255]
+
+    # Convert to grayscale for cropping
+    gray = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
+
+    # Threshold to binarize the image
+    _, binary = cv2.threshold(gray, 240, 255, cv2.THRESH_BINARY_INV)
+
+    # Find contours to determine cropping area
+    contours, _ = cv2.findContours(
+        binary,
+        cv2.RETR_EXTERNAL,
+        cv2.CHAIN_APPROX_SIMPLE,
+    )
+
+    # Get the bounding box for all non-white areas
+    if contours:
+        x, y, w, h = cv2.boundingRect(np.vstack(contours))
+        cropped_image = result[y : y + h, x : x + w]
+        cv2.imwrite(output_path, cropped_image)
+
+        console.print(f"[*] Image processed and saved to {output_path}", style=SUCCESS)
+        return 200
+    else:
+        console.print(
+            "[!] No content detected, the image might be completely white.",
+            style=DANGER,
+        )
+        return 200

@@ -4,3 +4,6 @@
 /usersOLD.json
 /__pycache__
 /.env
+/questions/*.*
+t.py
+working_out.json

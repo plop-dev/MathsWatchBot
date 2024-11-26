@@ -1,4 +1,5 @@
 from utils import (
+    get_working_out,
     getcookies,
     login,
     extractanswers,
@@ -8,16 +9,20 @@ from utils import (
     find_user_info,
     find_class,
     convert_latex_to_unicode,
+    downloadquestion,
+    crop_whitespace,
+    run_once,
 )
 
 import sys
 import json
 from rich.console import Console
 from rich.padding import Padding
+from rich.panel import Panel
 from dotenv import load_dotenv
 import os
 
-load_dotenv(dotenv_path=".env")
+load_dotenv()
 
 USERNAME = os.getenv("LOGIN_USERNAME")
 PASSWORD = os.getenv("PASSWORD")
@@ -30,7 +35,45 @@ console = Console()
 cookies = {}
 
 
-def getanswer(username: str, quiz_id) -> None:
+def processanswerfunc(question_id: int) -> None:
+    console.print("[*] Downloading question...", style=INFO)
+    download_status = downloadquestion(question_id)
+    if download_status != 200:
+        if download_status == 10000:
+            console.print(f"[*] Question already {question_id} downloaded.", style=INFO)
+        else:
+            console.print(
+                f"[!] Error {download_status}: Could not download question {question_id}.",
+                style=DANGER,
+            )
+    else:
+        console.print(f"[+] Question {question_id} downloaded.", style=SUCCESS)
+
+    console.print("[*] Cropping whitespace...", style=INFO)
+    crop_status = crop_whitespace(
+        f"./questions/{question_id}.png",
+        f"./questions/{question_id}.png",
+    )
+    if crop_status != 200:
+        if crop_status == 10000:
+            console.print(
+                f"[*] Whitespace already for question {question_id}.", style=INFO
+            )
+        else:
+            console.print(
+                f"[!] Error {crop_status}: Could not crop whitespace for question {question_id}.",
+                style=DANGER,
+            )
+    else:
+        console.print(
+            f"[+] Whitespace cropped for question {question_id}.", style=SUCCESS
+        )
+
+
+processanswer = run_once(processanswerfunc)
+
+
+def getanswer(username: str, quiz_id: dict, working_out: bool = False) -> dict:
     global cookies
     console.print("[*] Getting cookies...", style=INFO)
     cookies = getcookies(username["username"], PASSWORD)
@@ -64,10 +107,17 @@ def getanswer(username: str, quiz_id) -> None:
         return "skipped"
 
     extracted_answers = {}
+    question_ids = {}
 
     for i in range(len(answers["answers"])):
         for j in range(len(answers["answers"][i]["answer"])):
             answer = answers["answers"][i]["answer"][j]["text"]
+            question_id = answers["answers"][i]["question_id"]
+
+            if working_out and not processanswer.has_run:
+                processanswer(question_id)
+                processanswer.has_run = False
+
             if isinstance(answer, list):
                 answer = str(answer)  # Convert list to string for hashing
             if f"{i + 1}" not in extracted_answers:
@@ -78,14 +128,18 @@ def getanswer(username: str, quiz_id) -> None:
                 extracted_answers[f"{i + 1}"][f"{j + 1}"][answer] = 0
             extracted_answers[f"{i + 1}"][f"{j + 1}"][answer] += 1
 
+            # Store the question_id separately
+            question_ids[f"{i + 1}"] = question_id
+
     console.print("[*] Logging out...", style=INFO)
     logout(cookies["connect.sid"], cookies["_csrf"])
     console.print("[+] Logged out", style=SUCCESS)
 
-    return extracted_answers
+    processanswer.has_run = True
+    return extracted_answers, question_ids
 
 
-def main(quiz_id: int | None = None) -> None:
+def main(quiz_id: int | None = None, use_working_out: bool | None = None) -> None:
     console.print(
         f"[*] Starting the script with default user: {USERNAME} ({find_user_info(USERNAME)['first_name'].strip() + ' ' + find_user_info(USERNAME)['surname']})...",
         style=INFO,
@@ -141,6 +195,7 @@ def main(quiz_id: int | None = None) -> None:
         users = json.load(file)[user_class]
 
         all_extracted_answers = {}
+        all_question_ids = {}
 
         for user in users:
             total_users += 1
@@ -148,17 +203,15 @@ def main(quiz_id: int | None = None) -> None:
                 f"[{INFO}]User: {user['username']} ({user['first_name'].strip() + ' ' + user['surname']})[/]",
                 align="left",
             )
-            res = getanswer(user, recent_quiz_id)
+            res = getanswer(user, recent_quiz_id, use_working_out)
 
             if res == "skipped":
                 continue
             else:
                 answers_found += 1
-                console.print(
-                    style=SUCCESS,
-                )
+                extracted_answers, question_ids = res
 
-                for question, answers in res.items():
+                for question, answers in extracted_answers.items():
                     if question not in all_extracted_answers:
                         all_extracted_answers[question] = {}
                     for sub_question, sub_answers in answers.items():
@@ -176,12 +229,46 @@ def main(quiz_id: int | None = None) -> None:
                                 count
                             )
 
+                # Store the question_ids
+                for question, question_id in question_ids.items():
+                    all_question_ids[question] = question_id
+
         most_common_answers = {}
         for question, answers in all_extracted_answers.items():
             most_common_answers[question] = {}
             for sub_question, sub_answers in answers.items():
                 most_common_answer = max(sub_answers, key=sub_answers.get)
                 most_common_answers[question][sub_question] = most_common_answer
+
+        working_out = {}
+
+        for file in os.listdir("./questions"):
+            working_out_file = "working_out.json"
+
+            # Check if working out file exists
+            if os.path.exists(working_out_file):
+                with open(working_out_file, "r") as f:
+                    working_out = json.load(f)
+            else:
+                working_out = {}
+
+            for file in os.listdir("./questions"):
+                question_id = file.split(".")[0]
+                if file.endswith(".png") and question_id not in working_out:
+                    console.print(
+                        f"[*] Generating working out for {file}...", style=INFO
+                    )
+                    answer = get_working_out(f"./questions/{file}")
+                    console.print(
+                        f"[+] Working out generated for {file}.", style=SUCCESS
+                    )
+
+                    latex = convert_latex_to_unicode(answer)
+                    working_out[question_id] = latex
+
+            # Save the working out to a file
+            with open(working_out_file, "w") as f:
+                json.dump(working_out, f)
 
         if len(most_common_answers) == 0:
             console.print(
@@ -196,6 +283,7 @@ def main(quiz_id: int | None = None) -> None:
 
                 for j in range(len(most_common_answers[f"{i + 1}"])):
                     answer = most_common_answers[f"{i + 1}"][f"{j + 1}"]
+                    question_id = all_question_ids[f"{i + 1}"]
 
                     try:
                         expr = answer.replace("[", "").replace("]", "").replace("'", "")
@@ -208,8 +296,20 @@ def main(quiz_id: int | None = None) -> None:
                     console.print(Padding(f"[{SUCCESS}]Answer {j + 1}[/]:", (0, 2)))
                     console.print(
                         Padding(
-                            f"{convert_latex_to_unicode(expr)}",
-                            (0, 4),
+                            Panel(
+                                f"{working_out[str(question_id)]}",  # display working out based on question id
+                                (0, 4),
+                                title="Working Out",
+                            )
+                        ),
+                    )
+                    console.print(
+                        Padding(
+                            Panel(
+                                f"{convert_latex_to_unicode(expr)}",
+                                (0, 4),
+                                title="Answer",
+                            )
                         )
                     )
 
@@ -223,4 +323,6 @@ def main(quiz_id: int | None = None) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    main(9442834, True)
+    # main()
+    # 9442834
