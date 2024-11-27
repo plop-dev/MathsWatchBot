@@ -39,43 +39,6 @@ A python script that retrieves MathsWatch answers by looking at already submitte
     DANGER = "bold red"
     ```
 
-## Usage
-
-1. **Get Cookies**:
-
-    ```py
-    from getcookies import getcookies
-    cookies = getcookies("username", "password")
-    ```
-
-2. **Login**:
-
-    ```py
-    from login import login
-    status_code = login(cookies["connect.sid"], cookies["_csrf"], "username", "password")
-    ```
-
-3. **Extract Answers**:
-
-    ```py
-    from extractanswers import extractanswers
-    answers = extractanswers(cookies["connect.sid"], cookies["_csrf"], "quiz_id")
-    ```
-
-4. **Get Recent Quizzes**:
-
-    ```py
-    from getrecent import getrecent
-    recent_quiz = getrecent(cookies["connect.sid"], cookies["_csrf"])
-    ```
-
-5. **Logout**:
-
-    ```py
-    from logout import logout
-    status_code = logout(cookies["connect.sid"], cookies["_csrf"])
-    ```
-
 ## License
 
 This project is licensed under the MIT License.
