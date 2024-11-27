@@ -49,7 +49,7 @@ def get_working_out(image_path):
         messages=[
             {
                 "role": "user",
-                "content": "You only provide working out for provided questions as well as the question itself; no answers. Display the workings and questions in latex format. You might receive 1 or 2 questions that might be labelled; answer both and label them if necessary. Provide between 2-4 steps of working out **maximum**. Don't include \\begin or \\align or \\\\ or boxed in the latex. Separate each step with a new line (do not include equal signs, they will be a new line). Only have a very short and brief explanation for some steps only if necessary. Format the working out in a layout that is easy to read.",
+                "content": "You only provide working out for provided questions as well as the question itself; no answers. Display the workings and questions in latex format. You might receive 1 or 2 questions that might be labelled; answer both and label them if necessary. Don't include \\begin or \\align or \\\\ or boxed in the latex. Separate each step with a new line (do not include equal signs, they will be a new line). Only have a very short and brief explanation for some steps only if necessary. Format the working out in a layout that is easy to read.",
             },
             {
                 "role": "user",

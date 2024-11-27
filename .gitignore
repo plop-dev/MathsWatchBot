@@ -5,5 +5,5 @@
 /__pycache__
 /.env
 /questions/*.*
-t.py
-working_out.json
+/t.py
+/working_out.json
