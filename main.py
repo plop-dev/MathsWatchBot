@@ -374,6 +374,4 @@ def main(quiz_id: int | None = None, use_working_out: bool | None = None) -> Non
 
 
 if __name__ == "__main__":
-    # main(9442834, True)
     main(use_working_out=True)
-    # 9442834

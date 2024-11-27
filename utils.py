@@ -22,7 +22,13 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 console = Console()
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+try:
+    client = OpenAI(api_key=OPENAI_API_KEY)
+except Exception as e:
+    console.print(
+        f"[-] An error occured initialising OPENAI client. Reason: {e}",
+        style=DANGER,
+    )
 
 
 def run_once(f):
