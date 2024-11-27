@@ -9,6 +9,7 @@ A python script that retrieves MathsWatch answers by looking at already submitte
 - **Get Recent Quizzes**: Fetch the most recent quizzes assigned to a student.
 - **Logout**: Securely log out from the MathsWatch platform.
 - **Recon**: An separate script that loops through logins and stores them in a json file by class.
+- **AI working out**: Since the methods above don't get working out which is often required, I've added gpt-4o to generate the  working out (**will require an OPENAI API account, with enough credits**).
 
 ## Installation
 
@@ -32,7 +33,7 @@ A python script that retrieves MathsWatch answers by looking at already submitte
     ```env
     LOGIN_USERNAME = "User123"
     PASSWORD = "Password123"
-
+    OPENAI_API_KEY=[TOKEN HERE]
     INFO = "bold blue"
     SUCCESS = "bold green"
     DANGER = "bold red"
@@ -74,17 +75,6 @@ A python script that retrieves MathsWatch answers by looking at already submitte
     from logout import logout
     status_code = logout(cookies["connect.sid"], cookies["_csrf"])
     ```
-
-## File Structure
-
-- `getcookies.py`: Contains the function to get cookies for authentication.
-- `login.py`: Handles user login.
-- `extractanswers.py`: Extracts answers for assigned work.
-- `getrecent.py`: Retrieves recent quizzes.
-- `logout.py`: Logs out the user.
-- `main.py`: Main script to run the bot.
-- `recon.py`: Script for reconnaissance tasks.
-- `.gitignore`: Specifies files and directories to be ignored by Git.
 
 ## License
 

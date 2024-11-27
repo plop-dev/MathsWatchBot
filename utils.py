@@ -45,6 +45,7 @@ def get_working_out(image_path):
 
     response = client.chat.completions.create(
         model="gpt-4o",
+        temperature=0.05,
         messages=[
             {
                 "role": "user",
@@ -55,7 +56,7 @@ def get_working_out(image_path):
                 "content": [
                     {
                         "type": "text",
-                        "text": "What is the working for this question? Don't add backslashes before every bracket.",
+                        "text": "What is the working for this question? Don't add backslashes before every bracket. When separating questions, always use the format: 'ANSWER [a or b or c, etc.]' UNLESS the question only has one 'sub-question'.",
                     },
                     {
                         "type": "image_url",
@@ -102,12 +103,12 @@ def generate_headers(sid: str | None = None, csrf: str | None = None) -> dict:
 
 
 def extractanswers(sid: str, csrf: str, qid: str) -> dict:
-    url = f"https://vle.mathswatch.co.uk/duocms/api/answers?assignedwork_id={qid['id']}"
-    payload = {}
+    url = "https://vle.mathswatch.co.uk/duocms/api/answers"
+    params = {"assignedwork_id": qid}
     headers = generate_headers(sid, csrf)
 
     try:
-        request = requests.request("GET", url, headers=headers, data=payload)
+        request = requests.request("GET", url, headers=headers, params=params)
         response = json.loads(request.text.replace("'", '"'))
         answers = {
             "status": response["status"],
@@ -283,7 +284,6 @@ def convert_latex_to_unicode(latex_str):
         "minus": "-",
         "plus": "+",
         "times": "×",
-        "div": "÷",
     }
     for latex_cmd, unicode_char in symbol_replacements.items():
         latex_str = latex_str.replace(latex_cmd, unicode_char)
