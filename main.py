@@ -35,6 +35,7 @@ DANGER = os.getenv("DANGER")
 console = Console()
 
 cookies = {}
+total_questions = 0
 
 
 def processanswerfunc(question_id: int) -> None:
@@ -122,7 +123,11 @@ def getanswer(username: dict, quiz_id: dict, working_out: bool = False) -> dict:
             answer = answers["answers"][i]["answer"][j]["text"]
             question_id = answers["answers"][i]["question_id"]
 
-            if working_out and not processanswer.has_run:
+            if (
+                working_out
+                and not processanswer.has_run
+                and (total_questions == len(answers["answers"]))
+            ):
                 processanswer(question_id)
                 processanswer.has_run = False
 
@@ -143,12 +148,19 @@ def getanswer(username: dict, quiz_id: dict, working_out: bool = False) -> dict:
     logout(cookies["connect.sid"], cookies["_csrf"])
     console.print("[+] Logged out", style=SUCCESS)
 
-    processanswer.has_run = True
+    if (
+        working_out
+        and not processanswer.has_run
+        and (total_questions == len(answers["answers"]))
+    ):
+        processanswer.has_run = True
     # sys.exit(-1)
     return extracted_answers, question_ids
 
 
 def main(quiz_id: int | None = None, use_working_out: bool | None = None) -> None:
+    global total_questions
+
     console.print(
         f"[*] Starting the script with default user: {USERNAME} ({find_user_info(USERNAME)['first_name'].strip() + ' ' + find_user_info(USERNAME)['surname']})...",
         style=INFO,
@@ -177,7 +189,13 @@ def main(quiz_id: int | None = None, use_working_out: bool | None = None) -> Non
 
     if quiz_id is None:
         console.print("[*] Getting recent quiz ID...", style=INFO)
+
         recent_quiz_id = getrecent(def_cookies["connect.sid"], def_cookies["_csrf"])
+        quiz_info = getquiz(
+            def_cookies["connect.sid"], def_cookies["_csrf"], recent_quiz_id["id"]
+        )
+        total_questions = quiz_info["num_questions"]
+
         console.print(
             f"[+] Recent quiz ID: {recent_quiz_id['id']} ({recent_quiz_id['name']})",
             style=SUCCESS,
@@ -187,6 +205,7 @@ def main(quiz_id: int | None = None, use_working_out: bool | None = None) -> Non
         recent_quiz_id = getquiz(
             def_cookies["connect.sid"], def_cookies["_csrf"], quiz_id
         )
+        total_questions = recent_quiz_id["num_questions"]
         console.print(
             f"[+] Recent quiz ID: {recent_quiz_id['id']} ({recent_quiz_id['name']})",
             style=SUCCESS,
@@ -257,8 +276,7 @@ def main(quiz_id: int | None = None, use_working_out: bool | None = None) -> Non
             for file in os.listdir("./questions"):
                 working_out_file = "working_out.json"
 
-                # Check if working out file exists
-                if os.path.exists(working_out_file):
+                if os.path.exists(working_out_file) and processanswer.has_run:
                     with open(working_out_file, "r") as f:
                         working_out = json.load(f)
                 else:
@@ -326,7 +344,7 @@ def main(quiz_id: int | None = None, use_working_out: bool | None = None) -> Non
                         console.print(
                             Padding(
                                 Panel(
-                                    f"{Markdown(working_out[str(question_id)][j])}",
+                                    Markdown(f"{working_out[str(question_id)][j]}"),
                                     title="Working Out",
                                     title_align="left",
                                 ),
