@@ -276,7 +276,8 @@ def main(quiz_id: int | None = None, use_working_out: bool | None = None) -> Non
             for file in os.listdir("./questions"):
                 working_out_file = "working_out.json"
 
-                if os.path.exists(working_out_file) and processanswer.has_run:
+                # if os.path.exists(working_out_file) and processanswer.has_run:
+                if os.path.exists(working_out_file):
                     with open(working_out_file, "r") as f:
                         working_out = json.load(f)
                 else:
