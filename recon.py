@@ -1,6 +1,4 @@
-from getcookies import getcookies
-from login import login
-from logout import logout
+from utils import getcookies, login, logout
 from main import PASSWORD, INFO, SUCCESS, DANGER, console
 
 import requests
