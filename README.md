@@ -26,7 +26,10 @@ A python script that retrieves MathsWatch answers by looking at already submitte
     ```
 
 3. Install the required dependencies:
-    you'll get errors for depedencies that aren't installed anyways
+    
+    ```sh
+    pip install -r requirements.txt
+    ```
 
 4. Add a config file (.env):
 
