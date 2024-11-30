@@ -215,6 +215,13 @@ def main(quiz_id: int | None = None, use_working_out: bool | None = None) -> Non
     logout(def_cookies["connect.sid"], def_cookies["_csrf"])
     console.print("[+] Logged out", style=SUCCESS)
 
+    res = console.input(
+        f"[{INFO}][*] Get answers for this quiz? (y/n)❯ [/]",
+    )
+    if res.lower() != "y":
+        console.print("[!] Exiting script. No answers will be extracted.", style=DANGER)
+        sys.exit()
+
     del def_cookies
 
     with open("users.json", "r") as file:
@@ -374,4 +381,4 @@ def main(quiz_id: int | None = None, use_working_out: bool | None = None) -> Non
 
 
 if __name__ == "__main__":
-    main(use_working_out=True)
+    main(use_working_out=False)
