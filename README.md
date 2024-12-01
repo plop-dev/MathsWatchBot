@@ -16,7 +16,7 @@ A python script that retrieves MathsWatch answers by looking at already submitte
 1. Clone the repository:
 
     ```sh
-    git clone https://github.com/yourusername/MathsWatchBot.git
+    git clone https://github.com/plop-dev/MathsWatchBot.git
     ```
 
 2. Navigate to the project directory:
