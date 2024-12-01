@@ -5,6 +5,7 @@ from utils import (
     login,
     extractanswers,
     logout,
+    getmarks,
     getrecent,
     getquiz,
     find_user_info,
@@ -158,7 +159,11 @@ def getanswer(username: dict, quiz_id: dict, working_out: bool = False) -> dict:
     return extracted_answers, question_ids
 
 
-def main(quiz_id: int | None = None, use_working_out: bool | None = None) -> None:
+def main(
+    quiz_id: int | None = None,
+    use_working_out: bool | None = None,
+    use_most_common: bool = True,
+) -> None:
     global total_questions
 
     console.print(
@@ -231,6 +236,7 @@ def main(quiz_id: int | None = None, use_working_out: bool | None = None) -> Non
 
         all_extracted_answers = {}
         all_question_ids = {}
+        user_found = False  # Added flag to indicate if a user with 100% is found
 
         for user in users:
             total_users += 1
@@ -238,117 +244,160 @@ def main(quiz_id: int | None = None, use_working_out: bool | None = None) -> Non
                 f"[{INFO}]User: {user['username']} ({user['first_name'].strip() + ' ' + user['surname']})[/]",
                 align="left",
             )
-            res = getanswer(user, recent_quiz_id, use_working_out)
 
-            if res == "skipped":
-                continue
-            elif res is None:
-                continue
-            else:
-                answers_found += 1
-                extracted_answers, question_ids = res
+            # Check if we should find a user with 100% marks
+            if not use_most_common and not user_found:
+                # ...existing code to get cookies and login...
+                cookies = getcookies(user["username"], PASSWORD)
+                login_info = login(
+                    cookies["connect.sid"], cookies["_csrf"], user["username"], PASSWORD
+                )
+                if login_info != 200:
+                    console.print(
+                        f"[!] Error {login_info}: Could not get user data.\n[i]Skipping user[/i]",
+                        style=DANGER,
+                    )
+                    continue
 
-                for question, answers in extracted_answers.items():
-                    if question not in all_extracted_answers:
-                        all_extracted_answers[question] = {}
-                    for sub_question, sub_answers in answers.items():
-                        if sub_question not in all_extracted_answers[question]:
-                            all_extracted_answers[question][sub_question] = {}
-                        for answer, count in sub_answers.items():
-                            if (
-                                answer
-                                not in all_extracted_answers[question][sub_question]
-                            ):
-                                all_extracted_answers[question][sub_question][
-                                    answer
-                                ] = 0
-                            all_extracted_answers[question][sub_question][answer] += (
-                                count
-                            )
-
-                # Store the question_ids
-                for question, question_id in question_ids.items():
-                    all_question_ids[question] = question_id
-
-        most_common_answers = {}
-        for question, answers in all_extracted_answers.items():
-            most_common_answers[question] = {}
-            for sub_question, sub_answers in answers.items():
-                most_common_answer = max(sub_answers, key=sub_answers.get)
-                most_common_answers[question][sub_question] = most_common_answer
-
-        working_out = {}
-
-        if use_working_out:
-            for file in os.listdir("./questions"):
-                working_out_file = "working_out.json"
-
-                # if os.path.exists(working_out_file) and processanswer.has_run:
-                if os.path.exists(working_out_file):
-                    with open(working_out_file, "r") as f:
-                        working_out = json.load(f)
+                # Get marks for the user
+                marks = getmarks(
+                    cookies["connect.sid"], cookies["_csrf"], recent_quiz_id["id"]
+                )
+                total_mark = marks.get("total_mark")
+                total_available = marks.get("total_available")
+                if total_mark == total_available:
+                    console.print(
+                        "[+] User has 100% on the quiz.",
+                        style=SUCCESS,
+                    )
+                    # Extract their answers
+                    res = getanswer(user, recent_quiz_id, use_working_out)
+                    if res:
+                        extracted_answers, question_ids = res
+                        user_found = True
+                        # Store the answers
+                        all_extracted_answers = extracted_answers
+                        all_question_ids = question_ids
+                    # Logout and break the loop
+                    logout(cookies["connect.sid"], cookies["_csrf"])
+                    break
                 else:
-                    working_out = {}
+                    logout(cookies["connect.sid"], cookies["_csrf"])
+                    continue
 
-                for file in os.listdir("./questions"):
-                    question_id = file.split(".")[0]
-                    if file.endswith(".png") and question_id not in working_out:
-                        console.print(
-                            f"[*] Generating working out for {file}...", style=INFO
-                        )
-                        answer = get_working_out(f"./questions/{file}")
-                        console.print(
-                            f"[+] Working out generated for {file}.", style=SUCCESS
-                        )
+            elif use_most_common:
+                # ...existing code...
+                res = getanswer(user, recent_quiz_id, use_working_out)
+                if res == "skipped" or res is None:
+                    continue
+                else:
+                    # ...existing code to accumulate answers...
+                    if res == "skipped":
+                        continue
+                    elif res is None:
+                        continue
+                    else:
+                        answers_found += 1
+                        extracted_answers, question_ids = res
 
-                        latex = convert_latex_to_unicode(answer)
-                        latex = re.sub(
-                            r"(\*\*)ANSWER(\s[a-g]|)?(\*\*)", r"ANSWER\2", latex
-                        )
+                        for question, answers in extracted_answers.items():
+                            if question not in all_extracted_answers:
+                                all_extracted_answers[question] = {}
+                            for sub_question, sub_answers in answers.items():
+                                if sub_question not in all_extracted_answers[question]:
+                                    all_extracted_answers[question][sub_question] = {}
+                                for answer, count in sub_answers.items():
+                                    if (
+                                        answer
+                                        not in all_extracted_answers[question][
+                                            sub_question
+                                        ]
+                                    ):
+                                        all_extracted_answers[question][sub_question][
+                                            answer
+                                        ] = 0
+                                    all_extracted_answers[question][sub_question][
+                                        answer
+                                    ] += count
 
-                        print(latex)
+                        # Store the question_ids
+                        for question, question_id in question_ids.items():
+                            all_question_ids[question] = question_id
 
-                        sub_working_outs = re.split(r"(ANSWER)((\s[a-g])|)", latex)
-                        sub_working_outs = [
-                            s.strip() for s in sub_working_outs if s and s.strip()
-                        ]
-
-                        working_out[question_id] = sub_working_outs
-
-                # Save the working out to a file
-                with open(working_out_file, "w") as f:
-                    json.dump(working_out, f)
-
-        if len(most_common_answers) == 0:
+        if not use_most_common and not user_found:
             console.print(
-                f"[!] No answers found for any user in {user_class}.",
+                f"[!] No user with 100% found in {user_class}.",
                 style=DANGER,
             )
-        else:
-            console.rule(f"[{INFO}]Most Common Answers[/]", align="left")
+            sys.exit()
 
-            for i in range(len(most_common_answers)):
+        if not use_most_common and user_found:
+            # Print the answers of the user who got 100%
+            console.rule(
+                f"[{INFO}]Answers from {user['first_name'].strip() + ' ' + user['surname']}[/]",
+                align="left",
+            )
+
+            for i in range(len(all_extracted_answers)):
                 console.print(f"\n[{INFO}]Question {i + 1}[/]:")
-
-                for j in range(len(most_common_answers[f"{i + 1}"])):
-                    answer = most_common_answers[f"{i + 1}"][f"{j + 1}"]
+                for j in range(len(all_extracted_answers[f"{i + 1}"])):
+                    answer = list(all_extracted_answers[f"{i + 1}"][f"{j + 1}"].keys())[
+                        0
+                    ]
                     question_id = all_question_ids[f"{i + 1}"]
-
-                    try:
-                        expr = answer.replace("[", "").replace("]", "").replace("'", "")
-                    except Exception as e:
-                        console.print(
-                            f"Error parsing answer: {answer}: {e}", style=DANGER
-                        )
-                        continue
-
+                    expr = answer.replace("[", "").replace("]", "").replace("'", "")
                     if use_working_out:
-                        console.print(
-                            Padding(
-                                f"[{SUCCESS}]Answer {j + 1} (id: {question_id})[/]:",
-                                (0, 2),
-                            )
-                        )
+                        # ...existing code to display working out...
+                        for file in os.listdir("./questions"):
+                            working_out_file = "working_out.json"
+
+                            # if os.path.exists(working_out_file) and processanswer.has_run:
+                            if os.path.exists(working_out_file):
+                                with open(working_out_file, "r") as f:
+                                    working_out = json.load(f)
+                            else:
+                                working_out = {}
+
+                            for file in os.listdir("./questions"):
+                                question_id = file.split(".")[0]
+                                if (
+                                    file.endswith(".png")
+                                    and question_id not in working_out
+                                ):
+                                    console.print(
+                                        f"[*] Generating working out for {file}...",
+                                        style=INFO,
+                                    )
+                                    answer = get_working_out(f"./questions/{file}")
+                                    console.print(
+                                        f"[+] Working out generated for {file}.",
+                                        style=SUCCESS,
+                                    )
+
+                                    latex = convert_latex_to_unicode(answer)
+                                    latex = re.sub(
+                                        r"(\*\*)ANSWER(\s[a-g]|)?(\*\*)",
+                                        r"ANSWER\2",
+                                        latex,
+                                    )
+
+                                    print(latex)
+
+                                    sub_working_outs = re.split(
+                                        r"(ANSWER)((\s[a-g])|)", latex
+                                    )
+                                    sub_working_outs = [
+                                        s.strip()
+                                        for s in sub_working_outs
+                                        if s and s.strip()
+                                    ]
+
+                                    working_out[question_id] = sub_working_outs
+
+                            # Save the working out to a file
+                            with open(working_out_file, "w") as f:
+                                json.dump(working_out, f)
+
                         console.print(
                             Padding(
                                 Panel(
@@ -362,6 +411,13 @@ def main(quiz_id: int | None = None, use_working_out: bool | None = None) -> Non
 
                     console.print(
                         Padding(
+                            f"[{SUCCESS}]Answer {j + 1} (id: {question_id})[/]:",
+                            (0, 2),
+                        )
+                    )
+
+                    console.print(
+                        Padding(
                             Panel(
                                 f"{convert_latex_to_unicode(expr)}",
                                 title="Answer",
@@ -370,6 +426,113 @@ def main(quiz_id: int | None = None, use_working_out: bool | None = None) -> Non
                             (0, 4),
                         )
                     )
+        elif use_most_common:
+            # ...existing code to process and display most common answers...
+            most_common_answers = {}
+            for question, answers in all_extracted_answers.items():
+                most_common_answers[question] = {}
+                for sub_question, sub_answers in answers.items():
+                    most_common_answer = max(sub_answers, key=sub_answers.get)
+                    most_common_answers[question][sub_question] = most_common_answer
+
+            working_out = {}
+
+            if use_working_out:
+                for file in os.listdir("./questions"):
+                    working_out_file = "working_out.json"
+
+                    # if os.path.exists(working_out_file) and processanswer.has_run:
+                    if os.path.exists(working_out_file):
+                        with open(working_out_file, "r") as f:
+                            working_out = json.load(f)
+                    else:
+                        working_out = {}
+
+                    for file in os.listdir("./questions"):
+                        question_id = file.split(".")[0]
+                        if file.endswith(".png") and question_id not in working_out:
+                            console.print(
+                                f"[*] Generating working out for {file}...", style=INFO
+                            )
+                            answer = get_working_out(f"./questions/{file}")
+                            console.print(
+                                f"[+] Working out generated for {file}.", style=SUCCESS
+                            )
+
+                            latex = convert_latex_to_unicode(answer)
+                            latex = re.sub(
+                                r"(\*\*)ANSWER(\s[a-g]|)?(\*\*)", r"ANSWER\2", latex
+                            )
+
+                            print(latex)
+
+                            sub_working_outs = re.split(r"(ANSWER)((\s[a-g])|)", latex)
+                            sub_working_outs = [
+                                s.strip() for s in sub_working_outs if s and s.strip()
+                            ]
+
+                            working_out[question_id] = sub_working_outs
+
+                    # Save the working out to a file
+                    with open(working_out_file, "w") as f:
+                        json.dump(working_out, f)
+
+            if len(most_common_answers) == 0:
+                console.print(
+                    f"[!] No answers found for any user in {user_class}.",
+                    style=DANGER,
+                )
+            else:
+                console.rule(f"[{INFO}]Most Common Answers[/]", align="left")
+
+                for i in range(len(most_common_answers)):
+                    console.print(f"\n[{INFO}]Question {i + 1}[/]:")
+
+                    for j in range(len(most_common_answers[f"{i + 1}"])):
+                        answer = most_common_answers[f"{i + 1}"][f"{j + 1}"]
+                        question_id = all_question_ids[f"{i + 1}"]
+
+                        try:
+                            expr = (
+                                answer.replace("[", "")
+                                .replace("]", "")
+                                .replace("'", "")
+                            )
+                        except Exception as e:
+                            console.print(
+                                f"Error parsing answer: {answer}: {e}", style=DANGER
+                            )
+                            continue
+
+                        console.print(
+                            Padding(
+                                f"[{SUCCESS}]Answer {j + 1} (id: {question_id})[/]:",
+                                (0, 2),
+                            )
+                        )
+
+                        if use_working_out:
+                            console.print(
+                                Padding(
+                                    Panel(
+                                        Markdown(f"{working_out[str(question_id)][j]}"),
+                                        title="Working Out",
+                                        title_align="left",
+                                    ),
+                                    (0, 4),
+                                ),
+                            )
+
+                        console.print(
+                            Padding(
+                                Panel(
+                                    f"{convert_latex_to_unicode(expr)}",
+                                    title="Answer",
+                                    title_align="left",
+                                ),
+                                (0, 4),
+                            )
+                        )
 
     console.rule(f"[{SUCCESS}]Results:[/]", align="left")
     console.print(
@@ -381,4 +544,4 @@ def main(quiz_id: int | None = None, use_working_out: bool | None = None) -> Non
 
 
 if __name__ == "__main__":
-    main(use_working_out=False)
+    main(use_working_out=False, use_most_common=False)

@@ -143,6 +143,31 @@ def getcookies(username: str, password: str) -> dict:
         return None
 
 
+def getmarks(sid: str, csrf: str, qid: str) -> dict:
+    url = "https://vle.mathswatch.co.uk/duocms/api/assignedwork/student"
+    params = {"recent": "true"}
+    headers = generate_headers(sid, csrf)
+
+    try:
+        request = requests.request("GET", url, headers=headers, params=params)
+        response = json.loads(request.text.replace("'", '"'))
+
+        quiz = next((quiz for quiz in response["data"] if quiz["id"] == qid), None)
+        if quiz is None:
+            raise KeyError(f"Quiz with id {qid} not found.")
+
+        return {
+            "total_marks": quiz["marks"],
+            "student_marks": quiz["student_marks"],
+        }
+    except requests.RequestException as e:
+        print(f"Error during getmarks request: {e}")
+        return None
+    except (json.JSONDecodeError, KeyError, IndexError) as e:
+        print(f"Error parsing getmarks response: {e}")
+        return None
+
+
 def getrecent(sid: str, csrf: str) -> dict:
     url = "https://vle.mathswatch.co.uk/duocms/api/assignedwork/student"
     params = {"recent": "true"}
