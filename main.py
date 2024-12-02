@@ -238,91 +238,119 @@ def main(
         all_question_ids = {}
         user_found = False  # Added flag to indicate if a user with 100% is found
 
-        for user in users:
-            total_users += 1
-            console.rule(
-                f"[{INFO}]User: {user['username']} ({user['first_name'].strip() + ' ' + user['surname']})[/]",
-                align="left",
-            )
-
-            # Check if we should find a user with 100% marks
-            if not use_most_common and not user_found:
-                # ...existing code to get cookies and login...
-                cookies = getcookies(user["username"], PASSWORD)
-                login_info = login(
-                    cookies["connect.sid"], cookies["_csrf"], user["username"], PASSWORD
+        try:
+            for user in users:
+                total_users += 1
+                console.rule(
+                    f"[{INFO}]User: {user['username']} ({user['first_name'].strip() + ' ' + user['surname']})[/]",
+                    align="left",
                 )
-                if login_info != 200:
-                    console.print(
-                        f"[!] Error {login_info}: Could not get user data.\n[i]Skipping user[/i]",
-                        style=DANGER,
-                    )
-                    continue
 
-                # Get marks for the user
-                marks = getmarks(
-                    cookies["connect.sid"], cookies["_csrf"], recent_quiz_id["id"]
-                )
-                total_mark = marks.get("total_mark")
-                total_available = marks.get("total_available")
-                if total_mark == total_available:
-                    console.print(
-                        "[+] User has 100% on the quiz.",
-                        style=SUCCESS,
+                # Check if we should find a user with 100% marks
+                if not use_most_common and not user_found:
+                    # ...existing code to get cookies and login...
+                    cookies = getcookies(user["username"], PASSWORD)
+                    login_info = login(
+                        cookies["connect.sid"],
+                        cookies["_csrf"],
+                        user["username"],
+                        PASSWORD,
                     )
-                    # Extract their answers
-                    res = getanswer(user, recent_quiz_id, use_working_out)
-                    if res:
-                        extracted_answers, question_ids = res
-                        user_found = True
-                        # Store the answers
-                        all_extracted_answers = extracted_answers
-                        all_question_ids = question_ids
-                    # Logout and break the loop
-                    logout(cookies["connect.sid"], cookies["_csrf"])
-                    break
-                else:
-                    logout(cookies["connect.sid"], cookies["_csrf"])
-                    continue
-
-            elif use_most_common:
-                # ...existing code...
-                res = getanswer(user, recent_quiz_id, use_working_out)
-                if res == "skipped" or res is None:
-                    continue
-                else:
-                    # ...existing code to accumulate answers...
-                    if res == "skipped":
+                    if login_info != 200:
+                        console.print(
+                            f"[!] Error {login_info}: Could not get user data.\n[i]Skipping user[/i]",
+                            style=DANGER,
+                        )
                         continue
-                    elif res is None:
+
+                    # Get marks for the user
+                    marks = getmarks(
+                        cookies["connect.sid"], cookies["_csrf"], recent_quiz_id["id"]
+                    )
+                    if marks is not None:
+                        total_mark = marks.get("total_mark")
+                        total_available = marks.get("total_available")
+
+                        if total_mark == total_available:
+                            console.print(
+                                "[+] User has 100% on the quiz.",
+                                style=SUCCESS,
+                            )
+                            # Extract their answers
+                            res = getanswer(user, recent_quiz_id, use_working_out)
+                            console.print_json(data=res)
+                            if res:
+                                extracted_answers, question_ids = res
+                                user_found = True
+                                # Store the answers
+                                all_extracted_answers = extracted_answers
+                                all_question_ids = question_ids
+                            # Logout and break the loop
+                            logout(cookies["connect.sid"], cookies["_csrf"])
+                            break
+                        else:
+                            console.print(
+                                f"[!] User does not have 100% on the quiz. ({total_mark}/{total_available})",
+                                style=DANGER,
+                            )
+                            logout(cookies["connect.sid"], cookies["_csrf"])
+                            continue
+                    else:
+                        console.print(
+                            f"[!] Error: Could not get marks for {user['username']}.",
+                            style=DANGER,
+                        )
+                        logout(cookies["connect.sid"], cookies["_csrf"])
+                        continue
+
+                elif use_most_common:
+                    # ...existing code...
+                    res = getanswer(user, recent_quiz_id, use_working_out)
+                    if res == "skipped" or res is None:
                         continue
                     else:
-                        answers_found += 1
-                        extracted_answers, question_ids = res
+                        # ...existing code to accumulate answers...
+                        if res == "skipped":
+                            continue
+                        elif res is None:
+                            continue
+                        else:
+                            answers_found += 1
+                            extracted_answers, question_ids = res
 
-                        for question, answers in extracted_answers.items():
-                            if question not in all_extracted_answers:
-                                all_extracted_answers[question] = {}
-                            for sub_question, sub_answers in answers.items():
-                                if sub_question not in all_extracted_answers[question]:
-                                    all_extracted_answers[question][sub_question] = {}
-                                for answer, count in sub_answers.items():
+                            for question, answers in extracted_answers.items():
+                                if question not in all_extracted_answers:
+                                    all_extracted_answers[question] = {}
+                                for sub_question, sub_answers in answers.items():
                                     if (
-                                        answer
-                                        not in all_extracted_answers[question][
-                                            sub_question
-                                        ]
+                                        sub_question
+                                        not in all_extracted_answers[question]
                                     ):
+                                        all_extracted_answers[question][
+                                            sub_question
+                                        ] = {}
+                                    for answer, count in sub_answers.items():
+                                        if (
+                                            answer
+                                            not in all_extracted_answers[question][
+                                                sub_question
+                                            ]
+                                        ):
+                                            all_extracted_answers[question][
+                                                sub_question
+                                            ][answer] = 0
                                         all_extracted_answers[question][sub_question][
                                             answer
-                                        ] = 0
-                                    all_extracted_answers[question][sub_question][
-                                        answer
-                                    ] += count
+                                        ] += count
 
-                        # Store the question_ids
-                        for question, question_id in question_ids.items():
-                            all_question_ids[question] = question_id
+                            # Store the question_ids
+                            for question, question_id in question_ids.items():
+                                all_question_ids[question] = question_id
+        except KeyError as e:
+            console.print(
+                f"[!] Question number {int(e)} not found. Question number [i]probably[/] doesn't exist.",
+                style=DANGER,
+            )
 
         if not use_most_common and not user_found:
             console.print(
@@ -426,6 +454,7 @@ def main(
                             (0, 4),
                         )
                     )
+
         elif use_most_common:
             # ...existing code to process and display most common answers...
             most_common_answers = {}
@@ -486,53 +515,62 @@ def main(
                 console.rule(f"[{INFO}]Most Common Answers[/]", align="left")
 
                 for i in range(len(most_common_answers)):
-                    console.print(f"\n[{INFO}]Question {i + 1}[/]:")
+                    try:
+                        console.print(f"\n[{INFO}]Question {i + 1}[/]:")
 
-                    for j in range(len(most_common_answers[f"{i + 1}"])):
-                        answer = most_common_answers[f"{i + 1}"][f"{j + 1}"]
-                        question_id = all_question_ids[f"{i + 1}"]
+                        for j in range(len(most_common_answers[f"{i + 1}"])):
+                            answer = most_common_answers[f"{i + 1}"][f"{j + 1}"]
+                            question_id = all_question_ids[f"{i + 1}"]
 
-                        try:
-                            expr = (
-                                answer.replace("[", "")
-                                .replace("]", "")
-                                .replace("'", "")
-                            )
-                        except Exception as e:
+                            try:
+                                expr = (
+                                    answer.replace("[", "")
+                                    .replace("]", "")
+                                    .replace("'", "")
+                                )
+                            except Exception as e:
+                                console.print(
+                                    f"Error parsing answer: {answer}: {e}", style=DANGER
+                                )
+                                continue
+
                             console.print(
-                                f"Error parsing answer: {answer}: {e}", style=DANGER
+                                Padding(
+                                    f"[{SUCCESS}]Answer {j + 1} (id: {question_id})[/]:",
+                                    (0, 2),
+                                )
                             )
-                            continue
 
-                        console.print(
-                            Padding(
-                                f"[{SUCCESS}]Answer {j + 1} (id: {question_id})[/]:",
-                                (0, 2),
-                            )
-                        )
+                            if use_working_out:
+                                console.print(
+                                    Padding(
+                                        Panel(
+                                            Markdown(
+                                                f"{working_out[str(question_id)][j]}"
+                                            ),
+                                            title="Working Out",
+                                            title_align="left",
+                                        ),
+                                        (0, 4),
+                                    ),
+                                )
 
-                        if use_working_out:
                             console.print(
                                 Padding(
                                     Panel(
-                                        Markdown(f"{working_out[str(question_id)][j]}"),
-                                        title="Working Out",
+                                        f"{convert_latex_to_unicode(expr)}",
+                                        title="Answer",
                                         title_align="left",
                                     ),
                                     (0, 4),
-                                ),
+                                )
                             )
-
+                    except KeyError as _:
                         console.print(
-                            Padding(
-                                Panel(
-                                    f"{convert_latex_to_unicode(expr)}",
-                                    title="Answer",
-                                    title_align="left",
-                                ),
-                                (0, 4),
-                            )
+                            f"[!] Question number {i + 1} not found. Question number [i]probably[/] doesn't exist.",
+                            style=DANGER,
                         )
+                    continue
 
     console.rule(f"[{SUCCESS}]Results:[/]", align="left")
     console.print(
@@ -544,4 +582,4 @@ def main(
 
 
 if __name__ == "__main__":
-    main(use_working_out=False, use_most_common=False)
+    main(use_working_out=False, use_most_common=True)

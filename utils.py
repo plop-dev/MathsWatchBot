@@ -122,10 +122,10 @@ def extractanswers(sid: str, csrf: str, qid: str) -> dict:
         }
         return answers
     except requests.RequestException as e:
-        print(f"Error during extractanswers request: {e}")
+        console.print(f"[!] Error during extractanswers request: {e}", style=DANGER)
         return None
     except (json.JSONDecodeError, KeyError) as e:
-        print(f"Error parsing extractanswers response: {e}")
+        console.print(f"[!] Error parsing extractanswers response: {e}", style=DANGER)
         return None
 
 
@@ -139,7 +139,7 @@ def getcookies(username: str, password: str) -> dict:
         cookies = response.cookies.get_dict()
         return cookies
     except requests.RequestException as e:
-        print(f"Error during getcookies request: {e}")
+        console.print(f"[!] Error during getcookies request: {e}", style=DANGER)
         return None
 
 
@@ -161,10 +161,10 @@ def getmarks(sid: str, csrf: str, qid: str) -> dict:
             "student_marks": quiz["student_marks"],
         }
     except requests.RequestException as e:
-        print(f"Error during getmarks request: {e}")
+        console.print(f"[!] Error during getmarks request: {e}", style=DANGER)
         return None
     except (json.JSONDecodeError, KeyError, IndexError) as e:
-        print(f"Error parsing getmarks response: {e}")
+        console.print(f"[!] Error parsing getmarks response: {e}", style=DANGER)
         return None
 
 
@@ -181,10 +181,10 @@ def getrecent(sid: str, csrf: str) -> dict:
             "name": response["data"][0]["title"],
         }
     except requests.RequestException as e:
-        print(f"Error during getrecent request: {e}")
+        console.print(f"[!] Error during getrecent request: {e}", style=DANGER)
         return None
     except (json.JSONDecodeError, KeyError, IndexError) as e:
-        print(f"Error parsing getrecent response: {e}")
+        console.print(f"[!] Error parsing getrecent response: {e}", style=DANGER)
         return None
 
 
@@ -203,10 +203,10 @@ def getquiz(sid: str, csrf: str, qid: str) -> dict:
             "num_questions": num_questions,
         }
     except requests.RequestException as e:
-        print(f"Error during getrecent request: {e}")
+        console.print(f"[!] Error during getrecent request: {e}", style=DANGER)
         return None
     except (json.JSONDecodeError, KeyError, IndexError) as e:
-        print(f"Error parsing getrecent response: {e}")
+        console.print(f"[!] Error parsing getrecent response: {e}", style=DANGER)
         return None
 
 
@@ -219,7 +219,7 @@ def login(sid: str, csrf: str, username: str, password: str) -> int:
         response = requests.request("POST", url, headers=headers, data=payload)
         return response.status_code
     except requests.RequestException as e:
-        print(f"Error during login request: {e}")
+        console.print(f"[!] Error during login request: {e}", style=DANGER)
         return None
 
 
@@ -232,7 +232,7 @@ def logout(sid: str, csrf: str) -> int:
         request = requests.request("GET", url, headers=headers, data=payload)
         return request.status_code
     except requests.RequestException as e:
-        print(f"Error during logout request: {e}")
+        console.print(f"[!] Error during logout request: {e}", style=DANGER)
         return None
 
 
@@ -294,7 +294,7 @@ def downloadquestion(id: int) -> int:
 
         return request.status_code
     except requests.RequestException as e:
-        print(f"Error during download question request: {e}")
+        console.print(f"[!] Error during download question request: {e}", style=DANGER)
         return None
 
 
@@ -395,7 +395,7 @@ def crop_whitespace(
     # Load the image
     image = cv2.imread(image_path)
     if image is None:
-        print("Error: Unable to load image.")
+        console.print("E[!] rror: Unable to load image.", style=DANGER)
         return 500
 
     # Convert to HSV color space
