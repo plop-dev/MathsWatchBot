@@ -42,6 +42,12 @@ A python script that retrieves MathsWatch answers by looking at already submitte
     DANGER = "bold red"
     ```
 
+5. Run `recon.py` to get a list of users:
+
+    ```sh
+    python recon.py
+    ```
+
 ## License
 
 This project is licensed under the MIT License.
@@ -52,4 +58,4 @@ For any inquiries, please contact <him@maximec.dev>.
 
 ---
 
-<small>this readme is ai because I can't be asked. so don't judge my ai english.</small>
+<small>this readme is mostly ai so don't judge my ai english.</small>
