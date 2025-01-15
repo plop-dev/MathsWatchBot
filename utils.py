@@ -55,7 +55,7 @@ def get_working_out(image_path):
         messages=[
             {
                 "role": "user",
-                "content": "You only provide working out for provided questions as well as the question itself; no answers. Display the workings and questions in latex format. You might receive 1 or 2 questions that might be labelled; answer both and label them if necessary. Don't include \\begin or \\align or \\\\ or boxed in the latex. Separate each step with a new line (do not include equal signs, they will be a new line). Only have a very short and brief explanation for some steps only if necessary. Format the working out in a layout that is easy to read.",
+                "content": "You provide the question, working out and answer(s). Display the workings and questions and answers in latex format. You might receive 1 or 2 questions that might be labelled; answer both and label them if necessary. Don't include \\begin or \\align or \\\\ or boxed in the latex. Separate each step with a new line (do not include equal signs, they will be a new line). Only have a very short and brief explanation for some steps only if necessary. Format the working out in a layout that is easy to read.",
             },
             {
                 "role": "user",
@@ -210,14 +210,14 @@ def getquiz(sid: str, csrf: str, qid: str) -> dict:
         return None
 
 
-def login(sid: str, csrf: str, username: str, password: str) -> int:
+def login(sid: str, csrf: str, username: str, password: str) -> tuple[int, str]:
     url = "https://vle.mathswatch.co.uk/duocms/api/login"
     payload = json.dumps({"username": username, "password": password})
     headers = generate_headers(sid, csrf)
 
     try:
         response = requests.request("POST", url, headers=headers, data=payload)
-        return response.status_code
+        return response.status_code, response.reason
     except requests.RequestException as e:
         console.print(f"[!] Error during login request: {e}", style=DANGER)
         return None
@@ -233,6 +233,27 @@ def logout(sid: str, csrf: str) -> int:
         return request.status_code
     except requests.RequestException as e:
         console.print(f"[!] Error during logout request: {e}", style=DANGER)
+        return None
+
+
+def change_password(sid: str, csrf: str, username: dict, password: str) -> int:
+    url = "https://vle.mathswatch.co.uk/duocms/api/users/me"
+    payload = json.dumps(
+        {
+            "id": "me",
+            "email": f"21{username['surname'].strip()[:3].lower()}{username['first_name'].strip()[:3].lower()}@stgcc.co.uk",
+            "password": password,
+            "anonymous": False,
+        }
+    )
+    headers = generate_headers(sid, csrf)
+    console.print_json(payload)
+
+    try:
+        request = requests.request("PUT", url, headers=headers, data=payload)
+        return request.status_code, request.reason
+    except requests.RequestException as e:
+        console.print(f"[!] Error during change_password request: {e}", style=DANGER)
         return None
 
 
@@ -395,7 +416,7 @@ def crop_whitespace(
     # Load the image
     image = cv2.imread(image_path)
     if image is None:
-        console.print("E[!] rror: Unable to load image.", style=DANGER)
+        console.print("[!] Error: Unable to load image.", style=DANGER)
         return 500
 
     # Convert to HSV color space

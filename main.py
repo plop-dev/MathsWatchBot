@@ -86,11 +86,11 @@ def getanswer(username: dict, quiz_id: dict, working_out: bool = False) -> dict:
     login_info = login(
         cookies["connect.sid"], cookies["_csrf"], username["username"], PASSWORD
     )
-    console.print(f"[+] Login status: {login_info}", style=SUCCESS)
+    console.print(f"[+] Login status: {login_info[0]}", style=SUCCESS)
 
-    if login_info != 200:
+    if login_info[0] != 200:
         console.print(
-            f"[!] Error {login_info}: Could not get user data.\n[i]Skipping user[/i]",
+            f"[!] Error {login_info[0]}: {login_info[1]}\n[i]Skipping user[/i]",
             style=DANGER,
         )
         return None
@@ -182,10 +182,10 @@ def main(
     login_info = login(
         def_cookies["connect.sid"], def_cookies["_csrf"], USERNAME, PASSWORD
     )
-    console.print(f"[+] Login status: {login_info}", style=SUCCESS)
-    if login_info != 200:
+    console.print(f"[+] Login status: {login_info[0]}", style=SUCCESS)
+    if login_info[0] != 200:
         console.print(
-            f"[!] Error {login_info}: Could not get user data.\n[i]Exiting...[/i]",
+            f"[!] Error {login_info[0]}: {login_info[1]}\n[i]Exiting...[/i]",
             style=DANGER,
         )
         sys.exit()
@@ -256,9 +256,9 @@ def main(
                         user["username"],
                         PASSWORD,
                     )
-                    if login_info != 200:
+                    if login_info[0] != 200:
                         console.print(
-                            f"[!] Error {login_info}: Could not get user data.\n[i]Skipping user[/i]",
+                            f"[!] Error {login_info[0]}: {login_info[1]}\n[i]Skipping user[/i]",
                             style=DANGER,
                         )
                         continue
@@ -304,8 +304,8 @@ def main(
                         continue
 
                 elif use_most_common:
-                    # ...existing code...
                     res = getanswer(user, recent_quiz_id, use_working_out)
+
                     if res == "skipped" or res is None:
                         continue
                     else:
@@ -346,6 +346,7 @@ def main(
                             # Store the question_ids
                             for question, question_id in question_ids.items():
                                 all_question_ids[question] = question_id
+
         except KeyError as e:
             console.print(
                 f"[!] Question number {int(e)} not found. Question number [i]probably[/] doesn't exist.",
@@ -464,6 +465,8 @@ def main(
                     most_common_answer = max(sub_answers, key=sub_answers.get)
                     most_common_answers[question][sub_question] = most_common_answer
 
+            console.print_json(data=all_extracted_answers)
+
             working_out = {}
 
             if use_working_out:
@@ -542,18 +545,24 @@ def main(
                             )
 
                             if use_working_out:
-                                console.print(
-                                    Padding(
-                                        Panel(
-                                            Markdown(
-                                                f"{working_out[str(question_id)][j]}"
+                                try:
+                                    console.print(
+                                        Padding(
+                                            Panel(
+                                                Markdown(
+                                                    f"{working_out[str(question_id)][j]}"
+                                                ),
+                                                title="Working Out",
+                                                title_align="left",
                                             ),
-                                            title="Working Out",
-                                            title_align="left",
+                                            (0, 4),
                                         ),
-                                        (0, 4),
-                                    ),
-                                )
+                                    )
+                                except IndexError as e:
+                                    console.print(
+                                        f"[!] Working out not found for question {question_id}.",
+                                        style=DANGER,
+                                    )
 
                             console.print(
                                 Padding(
@@ -582,4 +591,4 @@ def main(
 
 
 if __name__ == "__main__":
-    main(use_working_out=False, use_most_common=True)
+    main(use_working_out=True, use_most_common=True)

@@ -10,3 +10,6 @@
 /.vscode
 /temp
 /ideas.txt
+/wordlist*.txt
+/state.*
+/rules.txt
