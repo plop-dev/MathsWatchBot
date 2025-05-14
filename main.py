@@ -32,7 +32,9 @@ PASSWORD = os.getenv("PASSWORD")
 INFO = os.getenv("INFO")
 SUCCESS = os.getenv("SUCCESS")
 DANGER = os.getenv("DANGER")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+print(BASE_DIR)
 console = Console()
 
 cookies = {}
@@ -55,8 +57,8 @@ def processanswerfunc(question_id: int) -> None:
 
     console.print("[*] Cropping whitespace...", style=INFO)
     crop_status = crop_whitespace(
-        f"./questions/{question_id}.png",
-        f"./questions/{question_id}.png",
+        f"{BASE_DIR}/questions/{question_id}.png",
+        f"{BASE_DIR}/questions/{question_id}.png",
     )
     if crop_status != 200:
         if crop_status == 10000:
@@ -229,7 +231,7 @@ def main(
 
     del def_cookies
 
-    with open("users.json", "r") as file:
+    with open(f"{BASE_DIR}/users.json", "r") as file:
         answers_found = 0
         total_users = 0
         users = json.load(file)[user_class]
@@ -377,7 +379,7 @@ def main(
                     expr = answer.replace("[", "").replace("]", "").replace("'", "")
                     if use_working_out:
                         # ...existing code to display working out...
-                        for file in os.listdir("./questions"):
+                        for file in os.listdir(f"{BASE_DIR}/questions"):
                             working_out_file = "working_out.json"
 
                             # if os.path.exists(working_out_file) and processanswer.has_run:
@@ -387,7 +389,7 @@ def main(
                             else:
                                 working_out = {}
 
-                            for file in os.listdir("./questions"):
+                            for file in os.listdir(f"{BASE_DIR}/questions"):
                                 question_id = file.split(".")[0]
                                 if (
                                     file.endswith(".png")
@@ -397,7 +399,9 @@ def main(
                                         f"[*] Generating working out for {file}...",
                                         style=INFO,
                                     )
-                                    answer = get_working_out(f"./questions/{file}")
+                                    answer = get_working_out(
+                                        f"{BASE_DIR}/questions/{file}"
+                                    )
                                     console.print(
                                         f"[+] Working out generated for {file}.",
                                         style=SUCCESS,
@@ -470,7 +474,7 @@ def main(
             working_out = {}
 
             if use_working_out:
-                for file in os.listdir("./questions"):
+                for file in os.listdir(f"{BASE_DIR}/questions"):
                     working_out_file = "working_out.json"
 
                     # if os.path.exists(working_out_file) and processanswer.has_run:
@@ -480,7 +484,7 @@ def main(
                     else:
                         working_out = {}
 
-                    for file in os.listdir("./questions"):
+                    for file in os.listdir(f"{BASE_DIR}/questions"):
                         question_id = file.split(".")[0]
                         if file.endswith(".png") and question_id not in working_out:
                             console.print(
@@ -558,7 +562,7 @@ def main(
                                             (0, 4),
                                         ),
                                     )
-                                except IndexError as e:
+                                except IndexError:
                                     console.print(
                                         f"[!] Working out not found for question {question_id}.",
                                         style=DANGER,
@@ -591,4 +595,4 @@ def main(
 
 
 if __name__ == "__main__":
-    main(use_working_out=True, use_most_common=True)
+    main(use_working_out=False, use_most_common=True)

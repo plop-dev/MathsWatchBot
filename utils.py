@@ -19,6 +19,7 @@ INFO = os.getenv("INFO")
 SUCCESS = os.getenv("SUCCESS")
 DANGER = os.getenv("DANGER")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 console = Console()
 
@@ -55,14 +56,10 @@ def get_working_out(image_path):
         messages=[
             {
                 "role": "user",
-                "content": "You provide the question, working out and answer(s). Display the workings and questions and answers in latex format. You might receive 1 or 2 questions that might be labelled; answer both and label them if necessary. Don't include \\begin or \\align or \\\\ or boxed in the latex. Separate each step with a new line (do not include equal signs, they will be a new line). Only have a very short and brief explanation for some steps only if necessary. Format the working out in a layout that is easy to read.",
-            },
-            {
-                "role": "user",
                 "content": [
                     {
                         "type": "text",
-                        "text": "What is the working for this question? Don't add backslashes before every bracket. When separating questions, always use the format: 'ANSWER [a or b or c, etc.]' UNLESS the question only has one 'sub-question'.",
+                        "text": "You provide the question, working out and answer(s). Display the workings and questions and answers in latex format. You might receive 1 or 2 questions that might be labelled; answer both and label them if necessary. Don't include \\begin or \\align or \\\\ or boxed in the latex. Separate each step with a new line (do not include equal signs, they will be a new line). Only have a very short and brief explanation for some steps only if necessary. Format the working out in a layout that is easy to read. Answer the question:",
                     },
                     {
                         "type": "image_url",
@@ -259,7 +256,7 @@ def change_password(sid: str, csrf: str, username: dict, password: str) -> int:
 
 def find_user_info(username: str) -> dict:
     try:
-        with open("users.json", "r") as file:
+        with open(f"{BASE_DIR}/users.json", "r") as file:
             classes = json.load(file)
     except Exception as e:
         console.print(
@@ -280,7 +277,7 @@ def find_user_info(username: str) -> dict:
 
 def find_class(username: str) -> str:
     try:
-        with open("users.json", "r") as file:
+        with open(f"{BASE_DIR}/users.json", "r") as file:
             classes = json.load(file)
     except Exception as e:
         console.print(
@@ -401,13 +398,28 @@ def convert_latex_to_unicode(latex_str):
     # Convert subscripts
     transformed_str = re.sub(r"_(\{[^}]*\}|.)", convert_subscripts, transformed_str)
 
+    # Handle new line characters
+    transformed_str = transformed_str.replace("\\n", "\n")
+
     return transformed_str
 
 
+QUESTIONS_DIR = os.path.join(BASE_DIR, "questions")
+
+if not os.path.exists(QUESTIONS_DIR):
+    os.makedirs(QUESTIONS_DIR)
+
+
 def crop_whitespace(
-    image_path: str = "./questions/image.png",
-    output_path: str = "./questions/image_cropped.png",
+    image_path: str = None,
+    output_path: str = None,
 ) -> int:
+    # Use the reusable QUESTIONS_DIR variable
+    if image_path is None:
+        image_path = os.path.join(QUESTIONS_DIR, "image.png")
+    if output_path is None:
+        output_path = os.path.join(QUESTIONS_DIR, "image_cropped.png")
+
     # Check if the output file already exists
     if os.path.exists(output_path):
         console.print(f"[*] File {output_path} already exists.", style=SUCCESS)
