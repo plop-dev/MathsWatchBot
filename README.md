@@ -31,7 +31,7 @@ A python script that retrieves MathsWatch answers by looking at already submitte
     pip install -r requirements.txt
     ```
 
-4. Add a config file (.env):
+4. Add a config file (name it .env):
 
     ```env
     LOGIN_USERNAME = "User123"
