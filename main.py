@@ -34,7 +34,6 @@ SUCCESS = os.getenv("SUCCESS")
 DANGER = os.getenv("DANGER")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-print(BASE_DIR)
 console = Console()
 
 cookies = {}
