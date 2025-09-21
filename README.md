@@ -1,6 +1,6 @@
 # MathsWatchBot
 
-A python script that retrieves MathsWatch answers by looking at already submitted homework by logging into users in the same class. **Requires knowledge of users' passwords and ideally usernames beforehand.**
+A python script that retrieves MathsWatch answers by looking at already submitted homework by logging into users in the same class. **Requires knowledge of users' passwords and usernames beforehand.**
 
 ## Features
 
